@@ -13,7 +13,7 @@ import logging
 from dotenv import load_dotenv
 
 # Load environment variables
-load_dotenv('.env.enhanced')
+load_dotenv()
 
 from converter import PSDConverter
 from image_storage import ImageStorageService

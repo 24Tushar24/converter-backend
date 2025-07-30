@@ -29,14 +29,13 @@ env/
 
 # Environment Variables
 .env
-.env.local
-.env.development
-.env.test
-.env.production
+.env.*
+!.env.example
 
-# Logs
+# Logs and Runtime Data
 *.log
 logs/
+psd_converter.log
 
 # Test files
 test_*.py
@@ -48,6 +47,31 @@ quick_*.py
 # Demo files
 demo_*.py
 sample_*.py
+
+# Storage directories (runtime data)
+storage/downloads/*
+storage/jobs/*
+storage/metadata/*
+!storage/downloads/.gitkeep
+!storage/jobs/.gitkeep
+!storage/metadata/.gitkeep
+
+# IDE and Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
 example_*.py
 
 # Test data files

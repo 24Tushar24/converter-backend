@@ -20,11 +20,14 @@ A FastAPI-based service for converting PSD files to compressed JPEG/WebP/AVIF fo
    pip install -r requirements.txt
    ```
 
-2. **Configure environment** (optional):
+2. **Configure environment**:
 
    ```bash
    cp .env.example .env
-   # Edit .env with your preferred settings
+   # Edit .env with your settings:
+   # - Cloudinary credentials for image storage
+   # - MongoDB connection string for metadata
+   # - Adjust performance settings as needed
    ```
 
 3. **Run the server**:
@@ -85,6 +88,60 @@ GET /download/{job_id}
 ```
 
 Download converted files or get download information.
+
+## Production Deployment
+
+### Cloud Service Requirements
+
+- **Python 3.8+** runtime environment
+- **Cloudinary Account** for image storage
+- **MongoDB Atlas** or MongoDB instance for metadata
+- **Storage**: At least 1GB for temporary file processing
+- **Memory**: Minimum 512MB, recommended 1GB+ for large files
+
+### Environment Variables
+
+Set these environment variables in your cloud service:
+
+```bash
+# Required - Cloudinary Configuration
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
+
+# Required - MongoDB Configuration
+MONGODB_CONNECTION_STRING=your_mongodb_connection_string
+MONGODB_DATABASE=psd_converter
+MONGODB_COLLECTION=product_images
+
+# Optional - Performance Tuning
+MAX_WORKERS=4
+CONCURRENCY_MODE=threading
+MAX_UPLOAD_SIZE_MB=500
+TASK_TIMEOUT=300
+```
+
+### Cloud Platform Deployment
+
+#### Railway / Render / Heroku
+
+1. Connect your GitHub repository
+2. Set environment variables in dashboard
+3. Deploy using the provided `main.py` entry point
+
+#### Google Cloud Run / AWS Lambda
+
+1. Use the included `requirements.txt` for dependencies
+2. Set the entry point to `main.py`
+3. Configure environment variables
+4. Set memory to at least 1GB for large file processing
+
+### Health Check
+
+Your cloud service can monitor the health endpoint:
+
+- **URL**: `GET /`
+- **Expected Response**: `{"message": "PSD Converter Backend is running"}`
 
 ## Project Structure
 
