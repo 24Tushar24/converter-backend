@@ -93,6 +93,7 @@ class PSDConverter:
                 logger.info("Performing deduplication check...")
                 
                 dedup_results = {}
+                duplicate_references = {}
                 files_to_check = []
                 
                 # Collect all output files for deduplication
@@ -118,10 +119,25 @@ class PSDConverter:
                             logger.warning(f"Duplicate detected: {file_key} "
                                          f"(distance: {dedup_result['similar_images'][0][1]})")
                             
-                            # Optionally remove duplicate files
+                            # Get reference to existing duplicate
+                            closest_match = dedup_result['similar_images'][0]
+                            existing_file_info = closest_match[2]  # File info from deduplication
+                            
+                            # Record duplicate information but keep the file for this job
                             if dedup_result['action'] == 'skip_duplicate':
-                                logger.info(f"Removing duplicate file: {file_path}")
-                                os.remove(file_path)
+                                logger.info(f"Duplicate detected but keeping for job: {file_key}")
+                                
+                                # Store reference to existing file instead of removing
+                                duplicate_references[file_key] = {
+                                    'original_path': file_path,
+                                    'existing_file': existing_file_info,
+                                    'hash': closest_match[0],
+                                    'distance': closest_match[1],
+                                    'action': 'kept_for_job'
+                                }
+                                
+                                # Keep the file but mark it as duplicate
+                                # Don't remove it so the job has something to store
                         else:
                             # Generate hash-based filename for unique files
                             if dedup_result.get('recommended_filename'):
@@ -151,7 +167,8 @@ class PSDConverter:
                                           if r.get('is_duplicate', False)),
                     'unique_files': sum(1 for r in dedup_results.values() 
                                       if not r.get('is_duplicate', False) and not r.get('error')),
-                    'results': dedup_results
+                    'results': dedup_results,
+                    'duplicate_references': duplicate_references
                 }
                 
                 logger.info(f"Deduplication complete: {conversion_result['deduplication_info']['duplicates_found']} duplicates, "

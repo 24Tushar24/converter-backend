@@ -127,6 +127,12 @@ class EnhancedTaskManager(TaskManager):
         self.config = config
         super().__init__(max_workers=config.max_workers)
         
+        # Initialize required components
+        from storage import StorageManager
+        from converter import PSDConverter
+        self.storage_manager = StorageManager()
+        self.converter = PSDConverter()
+        
         # Additional executors
         self.process_executor = None
         self.task_queue = asyncio.Queue(maxsize=config.queue_size)
@@ -159,12 +165,81 @@ class EnhancedTaskManager(TaskManager):
         """Start background workers for task processing."""
         # Background tasks will be started when the first task is submitted
         self._background_tasks_started = False
+        self._cleanup_task_started = False
     
     async def _ensure_background_tasks_started(self):
         """Ensure background tasks are started (called when first task is submitted)."""
         if not self._background_tasks_started and self.config.enable_monitoring:
             asyncio.create_task(self._monitor_tasks())
             self._background_tasks_started = True
+    
+    def _ensure_cleanup_task_started(self):
+        """Ensure cleanup task is started for old job cleanup."""
+        if not self._cleanup_task_started:
+            # Start a background task to clean up old job files periodically
+            asyncio.create_task(self._cleanup_old_jobs())
+            self._cleanup_task_started = True
+    
+    async def _cleanup_old_jobs(self):
+        """Background task to clean up old job files and metadata."""
+        while True:
+            try:
+                # Wait 1 hour between cleanup cycles
+                await asyncio.sleep(3600)
+                
+                # Clean up jobs older than 24 hours
+                cutoff_time = datetime.now() - timedelta(hours=24)
+                
+                # Get storage manager to clean up old files
+                from storage import StorageManager
+                storage = StorageManager()
+                
+                # Clean up old job directories
+                jobs_dir = storage.jobs_dir
+                if os.path.exists(jobs_dir):
+                    for job_folder in os.listdir(jobs_dir):
+                        job_path = os.path.join(jobs_dir, job_folder)
+                        if os.path.isdir(job_path):
+                            # Check creation time
+                            creation_time = datetime.fromtimestamp(os.path.getctime(job_path))
+                            if creation_time < cutoff_time:
+                                try:
+                                    import shutil
+                                    shutil.rmtree(job_path)
+                                    logger.info(f"Cleaned up old job directory: {job_folder}")
+                                except Exception as e:
+                                    logger.warning(f"Failed to clean up job directory {job_folder}: {e}")
+                
+                logger.debug("Completed cleanup cycle for old jobs")
+                
+            except Exception as e:
+                logger.error(f"Error in cleanup task: {e}")
+                # Continue running even if cleanup fails
+                await asyncio.sleep(3600)
+    
+    async def _save_file_content(self, file_content: bytes, filename: str) -> str:
+        """Save file content to a temporary file and return the path."""
+        import tempfile
+        
+        # Get file extension
+        file_extension = filename.lower().split('.')[-1]
+        suffix = f".{file_extension}"
+        
+        # Create temporary file
+        fd, temp_path = tempfile.mkstemp(suffix=suffix, prefix=f"upload_{int(time.time())}_")
+        
+        try:
+            with os.fdopen(fd, 'wb') as temp_file:
+                temp_file.write(file_content)
+            
+            logger.debug(f"Saved file content to temporary path: {temp_path}")
+            return temp_path
+            
+        except Exception as e:
+            # Clean up on error
+            if os.path.exists(temp_path):
+                os.unlink(temp_path)
+            raise Exception(f"Failed to save file content: {e}")
     
     async def submit_task(
         self,
@@ -385,14 +460,16 @@ class EnhancedTaskManager(TaskManager):
             # Initialize job
             file_extension = filename.lower().split('.')[-1]
             job_info = JobInfo(
-                job_id=job_id,
+                id=job_id,
                 status=JobStatus.PENDING,
                 created_at=datetime.now(),
-                updated_at=datetime.now(),
-                filename=filename,
-                file_type=file_extension,
-                quality=quality,
-                output_format=output_format
+                metadata={
+                    'filename': filename,
+                    'file_type': file_extension,
+                    'quality': quality,
+                    'output_format': output_format,
+                    'optimization_params': optimization_params
+                }
             )
             self.jobs[job_id] = job_info
             
@@ -428,7 +505,7 @@ class EnhancedTaskManager(TaskManager):
                 storage_result = await self.storage_manager.store_job_results(
                     job_id, temp_output_dir
                 )
-                job_info.results = storage_result
+                job_info.result = storage_result
                 self._update_job_status(job_id, JobStatus.COMPLETED, progress=100.0)
                 
                 logger.info(f"Optimized job {job_id} completed successfully")
