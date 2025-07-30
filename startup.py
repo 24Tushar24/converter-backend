@@ -38,14 +38,19 @@ def main():
         
         missing_vars = []
         for var in required_vars:
-            if not os.getenv(var):
+            value = os.getenv(var)
+            if not value:
                 missing_vars.append(var)
+            else:
+                # Log that variable is set (but don't log the value for security)
+                logger.info(f"✅ {var} is configured")
         
         if missing_vars:
-            logger.warning(f"Missing environment variables: {missing_vars}")
-            logger.warning("Application may not function properly")
+            logger.error(f"❌ Missing environment variables: {missing_vars}")
+            logger.error("Application may not function properly")
+            logger.error("Please check Azure App Service Configuration → Application Settings")
         else:
-            logger.info("All required environment variables are set")
+            logger.info("✅ All required environment variables are set")
         
         # Import and run the FastAPI app
         logger.info("Starting FastAPI application...")
