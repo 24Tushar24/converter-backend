@@ -14,7 +14,37 @@
 
 - This happens when deduplication detects files identical to previously processed ones
 - Files are now kept for each job even if duplicates are detected
-- Check the response for `deduplication_info` to see duplicate statusthe existing virtual environment
+- Check the response for `deduplication_info` to see duplicate status
+
+### Azure Deployment Issues
+
+**App keeps shutting down on Azure**:
+
+- Updated to use modern FastAPI lifespan handlers instead of deprecated `@app.on_event`
+- Use the provided `startup.py` script as your Azure startup command
+- Ensure all environment variables are properly set in Azure App Service Configuration
+- See `AZURE_DEPLOYMENT.md` for complete deployment guide
+
+**Environment variables not loading**:
+
+- Set all required variables in Azure App Service → Configuration → Application Settings
+- Don't rely on `.env` files in production - use Azure configuration
+- Required variables: `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`, `MONGODB_CONNECTION_STRING`
+
+**405 Method Not Allowed**:
+
+- Ensure you're using the correct endpoint: `POST /product/upload` (not `/products/upload`)
+- Check that the HTTP method is POST, not GET
+
+**500 Internal Server Error on upload**:
+
+- Check Azure logs for detailed error messages
+- Verify all environment variables are set correctly
+- Test the `/health` endpoint to check service status
+- Ensure MongoDB connection string is accessible from Azure
+- Verify Cloudinary credentials are valid
+
+## Quick Start
 source .venv/bin/activate
 
 # You should see (.venv) in your terminal prompt
@@ -53,6 +83,9 @@ The server will start on `http://127.0.0.1:8000` with auto-reload enabled in dev
 ```bash
 # Check health endpoint
 curl http://127.0.0.1:8000/health
+
+# Basic status check
+curl http://127.0.0.1:8000/
 
 # Or open in browser
 # http://127.0.0.1:8000/docs (Swagger UI)

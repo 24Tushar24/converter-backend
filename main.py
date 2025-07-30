@@ -6,6 +6,7 @@ Only includes essential product management endpoints.
 from fastapi import FastAPI, File, UploadFile, HTTPException, BackgroundTasks
 from fastapi.responses import JSONResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
 import os
 import time
 from typing import Optional
@@ -22,22 +23,6 @@ from utils import setup_logging, generate_job_id, get_env_var, format_file_size
 # Setup logging
 setup_logging()
 logger = logging.getLogger(__name__)
-
-# Initialize FastAPI app
-app = FastAPI(
-    title="PSD Converter Backend - Simplified",
-    description="Convert PSD files to JPEG and store in Cloudinary + MongoDB",
-    version="1.0.0"
-)
-
-# Add CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # Configure appropriately for production
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 # Initialize services
 converter = PSDConverter()
@@ -108,6 +93,50 @@ def normalize_product_type(name):
     return normalized
 
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Application lifespan handler for startup and shutdown events."""
+    # Startup
+    logger.info("PSD Converter Backend starting up...")
+    
+    # Load dynamic product types
+    load_dynamic_product_types()
+    logger.info(f"Total product types available: {len(get_all_product_types())} (Base: {len(BASE_PRODUCT_TYPES)}, Dynamic: {len(DYNAMIC_PRODUCT_TYPES)})")
+    
+    # Initialize image storage service
+    try:
+        await image_storage.initialize()
+        logger.info("Image storage service (Cloudinary + MongoDB) initialized")
+    except Exception as e:
+        logger.warning(f"Image storage service initialization failed: {e}")
+        logger.warning("Product upload features may not work properly")
+    
+    yield
+    
+    # Shutdown
+    logger.info("PSD Converter Backend shutting down...")
+    await image_storage.shutdown()
+    logger.info("All services shutdown complete")
+
+
+# Initialize FastAPI app with lifespan
+app = FastAPI(
+    title="PSD Converter Backend - Simplified",
+    description="Convert PSD files to JPEG and store in Cloudinary + MongoDB",
+    version="1.0.0",
+    lifespan=lifespan
+)
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Configure appropriately for production
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
 @app.get("/")
 async def root():
     """Health check endpoint"""
@@ -117,6 +146,38 @@ async def root():
         "default_product": DEFAULT_PRODUCT_TYPE,
         "workflow": "PSD → JPEG → Cloudinary → MongoDB"
     }
+
+
+@app.get("/health")
+async def health_check():
+    """Detailed health check endpoint"""
+    try:
+        # Check environment variables
+        env_status = {
+            "cloudinary_configured": bool(os.getenv("CLOUDINARY_CLOUD_NAME")),
+            "mongodb_configured": bool(os.getenv("MONGODB_CONNECTION_STRING")),
+        }
+        
+        # Check services
+        services_status = {
+            "image_storage_initialized": hasattr(image_storage, 'cloudinary_service'),
+            "converter_initialized": hasattr(converter, 'storage_optimizer'),
+        }
+        
+        return {
+            "status": "healthy",
+            "environment": env_status,
+            "services": services_status,
+            "product_types": get_all_product_types(),
+            "max_file_size_mb": MAX_FILE_SIZE // (1024 * 1024),
+            "allowed_extensions": ALLOWED_EXTENSIONS
+        }
+    except Exception as e:
+        logger.error(f"Health check failed: {e}")
+        return {
+            "status": "unhealthy",
+            "error": str(e)
+        }
 
 
 @app.get("/product-types")
@@ -364,9 +425,16 @@ async def upload_product_image(
             }
         )
         
+    except HTTPException:
+        # Re-raise HTTP exceptions (they have proper status codes)
+        raise
     except Exception as e:
         logger.error(f"Error in product upload endpoint: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Error type: {type(e).__name__}")
+        logger.error(f"Error details: {repr(e)}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
 @app.get("/products")
@@ -554,38 +622,16 @@ async def process_product_upload(
         
     except Exception as e:
         logger.error(f"Product upload job {job_id} failed: {str(e)}")
+        logger.error(f"Error type: {type(e).__name__}")
+        logger.error(f"Error details: {repr(e)}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
         product_jobs[job_id].update({
             "status": "failed",
             "progress": 0.0,
             "message": f"Error: {str(e)}",
             "error": str(e)
         })
-
-
-@app.on_event("startup")
-async def startup_event():
-    """Application startup event handler."""
-    logger.info("PSD Converter Backend starting up...")
-    
-    # Load dynamic product types
-    load_dynamic_product_types()
-    logger.info(f"Total product types available: {len(get_all_product_types())} (Base: {len(BASE_PRODUCT_TYPES)}, Dynamic: {len(DYNAMIC_PRODUCT_TYPES)})")
-    
-    # Initialize image storage service
-    try:
-        await image_storage.initialize()
-        logger.info("Image storage service (Cloudinary + MongoDB) initialized")
-    except Exception as e:
-        logger.warning(f"Image storage service initialization failed: {e}")
-        logger.warning("Product upload features may not work properly")
-
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    """Application shutdown event handler."""
-    logger.info("PSD Converter Backend shutting down...")
-    await image_storage.shutdown()
-    logger.info("All services shutdown complete")
 
 
 if __name__ == "__main__":
