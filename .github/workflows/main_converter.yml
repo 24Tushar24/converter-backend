@@ -22,16 +22,27 @@ jobs:
       - name: Set up Python version
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: "3.12"
 
       - name: Create and start virtual environment
         run: |
           python -m venv venv
           source venv/bin/activate
-      
+          pip install --upgrade pip
+
       - name: Install dependencies
-        run: pip install -r requirements.txt
-        
+        run: |
+          source venv/bin/activate
+          pip install --upgrade pip setuptools wheel
+          pip install -r requirements.txt
+
+      - name: Validate installation
+        run: |
+          source venv/bin/activate
+          python -c "import fastapi, uvicorn; print('✅ Core packages installed')"
+          python -c "import cloudinary, pymongo; print('✅ Service packages installed')"
+          python -c "from psd_tools import PSDImage; print('✅ PSD tools installed')"
+
       # Optional: Add step to run tests here (PyTest, Django test suites, etc.)
 
       - name: Upload artifact for deployment jobs
@@ -54,7 +65,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: python-app
-      
+
       - name: Login to Azure
         uses: azure/login@v2
         with:
@@ -62,10 +73,9 @@ jobs:
           tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_93893363222F444BB769F345F0B73A2D }}
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_06EBD22786AD4ADF97DF4A40C37866C6 }}
 
-      - name: 'Deploy to Azure Web App'
+      - name: "Deploy to Azure Web App"
         uses: azure/webapps-deploy@v3
         id: deploy-to-webapp
         with:
-          app-name: 'converter'
-          slot-name: 'Production'
-          
+          app-name: "converter"
+          slot-name: "Production"
