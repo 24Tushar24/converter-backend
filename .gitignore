@@ -1,0 +1,126 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environment
+.venv/
+venv/
+ENV/
+env/
+
+# Environment Variables
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+
+# Logs
+*.log
+logs/
+
+# Test files
+test_*.py
+*_test.py
+tests/
+simple_*.py
+quick_*.py
+
+# Demo files
+demo_*.py
+sample_*.py
+example_*.py
+
+# Test data files
+*.psd
+test_*.jpeg
+test_*.jpg
+test_*.png
+downloaded_*.jpeg
+downloaded_*.jpg
+downloaded_*.png
+
+# Development files
+temp_*
+temp/
+tmp/
+
+# Development files
+create_*.py
+install_*.sh
+setup_*.py
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Media files (samples/tests)
+*.psd
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.bmp
+*.tiff
+*.webp
+*.avif
+!requirements.txt
+
+# Storage (keep structure but ignore content)
+storage/downloads/*
+storage/jobs/*
+storage/metadata/*
+!storage/downloads/.gitkeep
+!storage/jobs/.gitkeep
+!storage/metadata/.gitkeep
+
+# Documentation (development only)
+PROJECT_*.md
+STEP_*.md
+TODO.md
+CHANGELOG.md
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Database files (if any)
+*.db
+*.sqlite
+*.sqlite3
+
+# Coverage reports
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
