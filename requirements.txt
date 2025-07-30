@@ -1,6 +1,6 @@
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
-psd-tools==1.9.25
+psd-tools==1.9.24
 Pillow==10.1.0
 python-multipart==0.0.6
 imagehash==4.3.1
