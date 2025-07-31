@@ -1,213 +1,153 @@
 # PSD Converter Backend
 
-A FastAPI-based service for converting PSD files to compressed JPEG/WebP/AVIF formats.
+A FastAPI-based service for converting PSD files to compressed images.
 
-## Features
+## 🚀 Quick Start
 
-- **Single PSD Upload**: Convert individual PSD files
-- **Batch ZIP Processing**: Extract and convert multiple PSD files from ZIP archives
-- **Multiple Output Formats**: JPEG, WebP, and AVIF support
-- **Asynchronous Processing**: Background job handling with progress tracking
-- **Optimized Compression**: Configurable quality settings for minimal file sizes
-- **Duplicate Detection**: Image hashing to prevent redundant storage
-- **Modular Architecture**: Clean separation of concerns
-
-## Quick Start
-
-1. **Install dependencies**:
-
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-2. **Configure environment**:
-
-   ```bash
-   cp .env.example .env
-   # Edit .env with your settings:
-   # - Cloudinary credentials for image storage
-   # - MongoDB connection string for metadata
-   # - Adjust performance settings as needed
-   ```
-
-3. **Run the server**:
-
-   ```bash
-   python main.py
-   ```
-
-   Or using uvicorn directly:
-
-   ```bash
-   uvicorn main:app --reload --host 0.0.0.0 --port 8000
-   ```
-
-4. **Access the API**:
-   - API docs: http://localhost:8000/docs
-   - Health check: http://localhost:8000/
-
-## API Endpoints
-
-### Upload File
-
-```
-POST /upload
-```
-
-Upload a PSD file or ZIP archive containing PSD files.
-
-**Parameters:**
-
-- `file`: PSD or ZIP file
-- `quality` (optional): JPEG quality 1-100 (default: 75)
-- `format` (optional): Output format - jpeg, webp, avif (default: jpeg)
-
-**Response:**
-
-```json
-{
-  "job_id": "job_20241230_123456_abc12345",
-  "message": "File upload accepted, conversion started",
-  "filename": "example.psd",
-  "status": "processing"
-}
-```
-
-### Check Job Status
-
-```
-GET /status/{job_id}
-```
-
-Get the current status and progress of a conversion job.
-
-### Download Results
-
-```
-GET /download/{job_id}
-```
-
-Download converted files or get download information.
-
-## Production Deployment
-
-### Cloud Service Requirements
-
-- **Python 3.8+** runtime environment
-- **Cloudinary Account** for image storage
-- **MongoDB Atlas** or MongoDB instance for metadata
-- **Storage**: At least 1GB for temporary file processing
-- **Memory**: Minimum 512MB, recommended 1GB+ for large files
-
-### Environment Variables
-
-Set these environment variables in your cloud service:
+### 1. One-Command Setup & Run
 
 ```bash
-# Required - Cloudinary Configuration
+# Setup everything (first time only)
+./setup.sh
+
+# Run the server locally
+./run.sh
+
+# Deploy to Azure (optional)
+./deploy-azure.sh
+```
+
+### 2. Manual Setup
+
+```bash
+# Install dependencies
+pip install -r requirements.txt
+
+# Run the server
+python main.py
+```
+
+### 3. Access API
+
+- **API Documentation**: http://localhost:8000/docs
+- **Health Check**: http://localhost:8000/
+
+## 🔧 Development
+
+### Local Development
+
+```bash
+# Install dependencies
+pip install -r requirements.txt
+
+# Run with auto-reload
+uvicorn main:app --reload --port 8000
+```
+
+### Production
+
+```bash
+# Run production server
+uvicorn main:app --host 0.0.0.0 --port 8000
+```
+
+## 📋 API Endpoints
+
+### Upload PSD File
+
+```
+POST /product/upload
+```
+
+- Upload PSD file with product type and quality settings
+- Returns job ID for tracking conversion progress
+
+### Get Products
+
+```
+GET /products
+```
+
+- List all converted products with pagination
+
+### Get Folders
+
+```
+GET /folders
+```
+
+- List all product type folders
+
+### Delete Product
+
+```
+DELETE /products/{id}
+```
+
+- Remove a specific product
+
+## ☁️ Azure Deployment
+
+### Quick Azure Deploy
+
+```bash
+# 1. Install Azure CLI
+curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+
+# 2. Login to Azure
+az login
+
+# 3. Create Web App (replace with your unique name)
+az webapp up --name your-converter-app --location westus2 --runtime "PYTHON:3.11"
+```
+
+### Environment Variables in Azure
+
+Set these in Azure Portal → App Services → Configuration:
+
+```bash
 CLOUDINARY_CLOUD_NAME=your_cloud_name
 CLOUDINARY_API_KEY=your_api_key
 CLOUDINARY_API_SECRET=your_api_secret
-
-# Required - MongoDB Configuration
-MONGODB_CONNECTION_STRING=your_mongodb_connection_string
-MONGODB_DATABASE=psd_converter
-MONGODB_COLLECTION=product_images
-
-# Optional - Performance Tuning
-MAX_WORKERS=4
-CONCURRENCY_MODE=threading
-MAX_UPLOAD_SIZE_MB=500
-TASK_TIMEOUT=300
+MONGODB_CONNECTION_STRING=your_mongodb_connection
 ```
 
-### Cloud Platform Deployment
+### Azure Startup Command
 
-#### Railway / Render / Heroku
+In Azure Portal → Configuration → General Settings → Startup Command:
 
-1. Connect your GitHub repository
-2. Set environment variables in dashboard
-3. Deploy using the provided `main.py` entry point
+```bash
+python main.py
+```
 
-#### Google Cloud Run / AWS Lambda
+Your API will be available at: `https://your-converter-app.azurewebsites.net/docs`
 
-1. Use the included `requirements.txt` for dependencies
-2. Set the entry point to `main.py`
-3. Configure environment variables
-4. Set memory to at least 1GB for large file processing
+## 🔧 Environment Setup
 
-### Health Check
+Create a `.env` file with:
 
-Your cloud service can monitor the health endpoint:
+```bash
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
+MONGODB_CONNECTION_STRING=your_mongodb_connection
+```
 
-- **URL**: `GET /`
-- **Expected Response**: `{"message": "PSD Converter Backend is running"}`
-
-## Project Structure
+## 📁 Project Structure
 
 ```
 converter backend/
-├── main.py              # FastAPI application and routes
-├── converter.py         # PSD to image conversion logic
-├── zip_handler.py       # ZIP extraction and batch processing
-├── tasks.py            # Background job management
-├── storage.py          # File storage and organization
-├── utils.py            # Helper functions and utilities
-├── requirements.txt    # Python dependencies
-├── .env.example       # Environment configuration template
+├── main.py              # FastAPI application
+├── converter.py         # PSD conversion logic
+├── image_storage.py     # Image storage service
+├── deduplication.py     # Duplicate detection
+├── utils.py            # Helper functions
+├── storage.py          # File management
+├── zip_handler.py      # ZIP file processing
+├── requirements.txt    # Dependencies
+├── setup.sh           # One-command setup
+├── run.sh             # One-command run
 └── README.md          # This file
 ```
 
-## Configuration
-
-Copy `.env.example` to `.env` and adjust settings:
-
-- **Storage**: Configure storage paths and limits
-- **Processing**: Set worker counts and file limits
-- **Compression**: Default quality and format settings
-- **Server**: Host, port, and debug settings
-
-## Storage Structure
-
-```
-storage/
-├── jobs/              # Individual job results
-│   └── {job_id}/     # Files for specific job
-├── downloads/         # ZIP archives for download
-└── metadata/         # Job metadata and information
-```
-
-## Development
-
-The codebase is organized into modular components:
-
-- **main.py**: FastAPI app, routing, and HTTP handling
-- **converter.py**: Core PSD conversion using psd-tools and Pillow
-- **zip_handler.py**: ZIP file extraction and batch processing
-- **tasks.py**: Async job management and progress tracking
-- **storage.py**: File storage, organization, and cleanup
-- **utils.py**: Shared utilities, logging, and helpers
-
-## Performance Optimization
-
-- **Concurrent Processing**: Multiple files processed simultaneously
-- **Optimized Compression**: Quality settings balance size vs. quality
-- **Progress Tracking**: Real-time job status and completion estimates
-- **Background Tasks**: Non-blocking upload and conversion
-- **Storage Management**: Automatic cleanup of old jobs
-
-## Error Handling
-
-- Comprehensive validation of uploaded files
-- Graceful handling of corrupted PSD files
-- Detailed error messages and logging
-- Progress tracking even for failed conversions
-
-## Supported Formats
-
-**Input**: PSD files (single or in ZIP archives)
-**Output**: JPEG, WebP, AVIF with configurable compression
-
-## License
-
-[Add your license information here]
+That's it! Simple and clean. 🚀
