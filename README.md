@@ -20,10 +20,10 @@ A FastAPI-based service for converting PSD files to compressed images.
 ### 2. Manual Setup
 
 ```bash
-# Install dependencies
+# Install dependencies (in virtual environment)
 pip install -r requirements.txt
 
-# Run the server
+# Run the server (in virtual environment)
 python main.py
 ```
 
@@ -139,15 +139,13 @@ MONGODB_CONNECTION_STRING=your_mongodb_connection
 converter backend/
 ├── main.py              # FastAPI application
 ├── converter.py         # PSD conversion logic
-├── image_storage.py     # Image storage service
+├── image_storage.py     # Image storage service (Cloudinary + MongoDB)
 ├── deduplication.py     # Duplicate detection
 ├── utils.py            # Helper functions
-├── storage.py          # File management
-├── zip_handler.py      # ZIP file processing
 ├── requirements.txt    # Dependencies
-├── setup.sh           # One-command setup
-├── run.sh             # One-command run
+├── deploy-azure.sh     # Azure deployment script
+├── .env.example       # Environment variables template
 └── README.md          # This file
 ```
 
-That's it! Simple and clean. 🚀
+That's it! Clean and production-ready. 🚀

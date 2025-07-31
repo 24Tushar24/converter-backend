@@ -37,16 +37,40 @@ env/
 logs/
 psd_converter.log
 
-# Test files
+# Storage directories (runtime generated)
+storage/
+uploads/
+temp/
+
+# Development files
+setup.sh
+run.sh
 test_*.py
 *_test.py
 tests/
 simple_*.py
 quick_*.py
-
-# Demo files
 demo_*.py
 sample_*.py
+
+# IDE and Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Azure
+.azure/
 
 # Storage directories (runtime data)
 storage/downloads/*

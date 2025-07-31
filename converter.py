@@ -13,7 +13,6 @@ from psd_tools import PSDImage
 import imagehash
 
 from utils import get_file_hash, ensure_directory
-from storage_optimizer import StorageOptimizer
 from deduplication import DuplicationDetector, DeduplicationManager
 
 logger = logging.getLogger(__name__)
@@ -25,7 +24,6 @@ class PSDConverter:
     def __init__(self, enable_deduplication: bool = True):
         self.supported_formats = ['jpeg', 'webp', 'avif']
         self.default_quality = 75
-        self.storage_optimizer = StorageOptimizer()
         self.enable_deduplication = enable_deduplication
         
         # Initialize deduplication if enabled
@@ -235,18 +233,9 @@ class PSDConverter:
             psd = PSDImage.open(psd_path)
             logger.info(f"PSD opened successfully - Size: {psd.size}")
             
-            # Get optimization recommendations
-            recommendations = self.storage_optimizer.get_optimization_recommendations(
-                psd.size, file_size, use_case
-            )
-            logger.info(f"Optimization recommendations: {recommendations['reasoning']}")
-            
-            # Apply recommendations if not overridden
+            # Use provided quality or default
             if quality_profile == 'auto':
-                quality_profile = recommendations['quality_profile']
-            
-            if max_resolution is None and recommendations['should_downscale']:
-                max_resolution = recommendations['recommended_max_resolution']
+                quality_profile = 'balanced'  # Default to balanced quality
             
             # Composite PSD layers
             logger.info("Compositing PSD layers...")
@@ -272,24 +261,21 @@ class PSDConverter:
             elif composite_image.mode != 'RGB':
                 composite_image = composite_image.convert('RGB')
             
-            # Apply storage optimization
-            optimization_result = self.storage_optimizer.optimize_image_for_storage(
-                image=composite_image,
-                output_path=output_path,
-                format=output_format,
-                quality_profile=quality_profile,
-                custom_quality=quality if quality != 75 else None,  # Only override if changed
-                max_resolution=max_resolution,
-                strip_metadata=strip_metadata,
-                generate_thumbnails=generate_thumbnails
-            )
+            # Apply resolution scaling if needed
+            if max_resolution and max(composite_image.size) > max_resolution:
+                composite_image.thumbnail((max_resolution, max_resolution), Image.Resampling.LANCZOS)
+                logger.info(f"Image resized to {composite_image.size}")
             
-            if not optimization_result['success']:
-                raise ValueError(f"Storage optimization failed: {optimization_result.get('error', 'Unknown error')}")
+            # Save the optimized image
+            save_options = {'quality': quality, 'optimize': True}
+            if output_format.upper() == 'JPEG':
+                save_options['progressive'] = True
+            
+            composite_image.save(output_path, format=output_format.upper(), **save_options)
             
             # Calculate comprehensive metrics
             original_size = os.path.getsize(psd_path)
-            optimized_size = optimization_result['optimized_size']
+            optimized_size = os.path.getsize(output_path)
             compression_ratio = (1 - optimized_size / original_size) * 100 if original_size > 0 else 0
             
             # Generate image hash for duplicate detection
@@ -307,8 +293,12 @@ class PSDConverter:
                     'image_hash': image_hash,
                     'file_hash': get_file_hash(output_path) if os.path.exists(output_path) else None
                 },
-                'optimization_info': optimization_result,
-                'recommendations_used': recommendations
+                'optimization_info': {
+                    'success': True,
+                    'format': output_format,
+                    'quality': quality,
+                    'size': composite_image.size
+                }
             }
             
             logger.info(f"Successfully converted {psd_path}")

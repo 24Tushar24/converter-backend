@@ -22,20 +22,35 @@ def setup_logging(level: str = "INFO") -> None:
     Args:
         level: Logging level (DEBUG, INFO, WARNING, ERROR)
     """
+    import os
+    
     log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     
-    logging.basicConfig(
-        level=getattr(logging, level.upper()),
-        format=log_format,
-        handlers=[
-            logging.StreamHandler(),
-            logging.FileHandler("psd_converter.log")
-        ]
-    )
+    # Check if production mode
+    is_production = os.getenv("PRODUCTION", "false").lower() == "true"
     
-    # Set specific loggers
+    # In production, use WARNING level and no file logging to reduce noise
+    if is_production:
+        logging.basicConfig(
+            level=logging.WARNING,
+            format=log_format,
+            handlers=[logging.StreamHandler()]
+        )
+    else:
+        logging.basicConfig(
+            level=getattr(logging, level.upper()),
+            format=log_format,
+            handlers=[
+                logging.StreamHandler(),
+                logging.FileHandler("psd_converter.log")
+            ]
+        )
+    
+    # Reduce verbosity of third-party loggers
     logging.getLogger("PIL").setLevel(logging.WARNING)
     logging.getLogger("urllib3").setLevel(logging.WARNING)
+    logging.getLogger("watchfiles").setLevel(logging.WARNING)
+    logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
 
 
 def generate_job_id(prefix: str = "job") -> str:

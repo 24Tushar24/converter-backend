@@ -4,7 +4,7 @@ Only includes essential product management endpoints.
 """
 
 from fastapi import FastAPI, File, UploadFile, HTTPException, BackgroundTasks
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import os
@@ -430,10 +430,6 @@ async def upload_product_image(
         raise
     except Exception as e:
         logger.error(f"Error in product upload endpoint: {str(e)}")
-        logger.error(f"Error type: {type(e).__name__}")
-        logger.error(f"Error details: {repr(e)}")
-        import traceback
-        logger.error(f"Traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}")
 
 
@@ -622,10 +618,6 @@ async def process_product_upload(
         
     except Exception as e:
         logger.error(f"Product upload job {job_id} failed: {str(e)}")
-        logger.error(f"Error type: {type(e).__name__}")
-        logger.error(f"Error details: {repr(e)}")
-        import traceback
-        logger.error(f"Traceback: {traceback.format_exc()}")
         product_jobs[job_id].update({
             "status": "failed",
             "progress": 0.0,
@@ -636,4 +628,27 @@ async def process_product_upload(
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
+    import os
+    
+    # Check if we're in production mode
+    is_production = os.getenv("PRODUCTION", "false").lower() == "true"
+    
+    # Production settings: no reload, less verbose logging
+    if is_production:
+        uvicorn.run(
+            "main:app", 
+            host="0.0.0.0", 
+            port=8000, 
+            reload=False,
+            log_level="warning"
+        )
+    else:
+        # Development settings: reload enabled but with reduced log level
+        uvicorn.run(
+            "main:app", 
+            host="0.0.0.0", 
+            port=8000, 
+            reload=True,
+            log_level="info",
+            reload_excludes=["*.log", "storage/*", "__pycache__/*"]
+        )
