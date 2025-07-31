@@ -52,9 +52,9 @@ jobs:
           path: .
 
       - name: 'Deploy to Azure Web App'
-        uses: azure/webapps-deploy@v3
+        uses: azure/webapps-deploy@v2
         id: deploy-to-webapp
         with:
           app-name: 'converter'
-          slot-name: 'Production'
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_CONVERTER }}
+          package: .
