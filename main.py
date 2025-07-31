@@ -630,24 +630,28 @@ if __name__ == "__main__":
     import uvicorn
     import os
     
-    # Check if we're in production mode
-    is_production = os.getenv("PRODUCTION", "false").lower() == "true"
+    # Get port from environment (Azure sets this automatically)
+    port = int(os.getenv("PORT", 8000))
     
-    # Production settings: no reload, less verbose logging
+    # Check if we're in production mode (Azure automatically sets this)
+    is_production = os.getenv("PRODUCTION", "true").lower() == "true"
+    
+    # Production settings: no reload, optimized for Azure
     if is_production:
         uvicorn.run(
             "main:app", 
             host="0.0.0.0", 
-            port=8000, 
+            port=port, 
             reload=False,
-            log_level="warning"
+            log_level="warning",
+            workers=1
         )
     else:
-        # Development settings: reload enabled but with reduced log level
+        # Development settings
         uvicorn.run(
             "main:app", 
             host="0.0.0.0", 
-            port=8000, 
+            port=port, 
             reload=True,
             log_level="info",
             reload_excludes=["*.log", "storage/*", "__pycache__/*"]
