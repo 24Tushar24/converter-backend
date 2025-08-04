@@ -65,7 +65,10 @@ class CloudinaryService:
             if original_filename:
                 # Remove .psd extension and use as public_id base
                 base_name = os.path.splitext(original_filename)[0]
-                upload_options["public_id"] = f"product_{base_name}"
+                # Sanitize filename for Cloudinary public_id (remove special characters)
+                import re
+                sanitized_name = re.sub(r'[^a-zA-Z0-9_-]', '_', base_name)
+                upload_options["public_id"] = f"product_{sanitized_name}"
                 upload_options["use_filename"] = False  # We're setting our own public_id
             
             # Add folder organization if product_type provided
